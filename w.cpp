@@ -35,36 +35,41 @@ void show_all_files(const char *path){
   closedir(dir);
 }
 
-ifstream::pos_type filesize(const char *s_path){
-   ifstream size(s_path);
-   size.seekg(0, ios::end);
-   int file_size = size.tellg();
-   cout<<"Size of the file is"<<" "<< file_size<<" "<<"bytes" << endl;
-   return 0;
+int showsize(string filesize){
+	int allsize = 0;
+	
+  struct stat fileinfo;
+  if(stat(filesize.c_str(), &fileinfo) != 0){
+    return -1;
+  }
+  if(S_ISDIR(fileinfo.st_mode)){
+    DIR *dir = opendir(filesize.c_str());
+    dirent *entry;
+    while((entry = readdir(dir)) != nullptr){
+      if((strcmp(entry->d_name, ".") != 0) && (strcmp(entry->d_name, "..") != 0)){
+        string next = filesize + "/" + entry->d_name;
+        allsize += showsize(next);
+      }
+    }
+    closedir(dir);
+    return allsize;
+  }
+  else{
+    return fileinfo.st_size;
+  }
 }
 
 int showp(){
-  struct dirent* dirEntity;
-  DIR* dir_proc;
-
-  dir_proc = opendir(PROC_DIRECTORY);
-      
-  while ((dirEntity = readdir(dir_proc)) != NULL){
-    if (dirEntity->d_type == DT_DIR){
-      if (dirEntity->d_name){
-        string path = string(PROC_DIRECTORY) + dirEntity->d_name + "/cmdline";
-
-        ifstream cmdLineFile(path.c_str());
-        string cmdLine;
-        if (cmdLineFile){
-          getline(cmdLineFile, cmdLine);
-        }
-        cout << "pid: " << dirEntity->d_name << " " << cmdLine << endl;
-      }
-    }
+  DIR *dir = opendir("/proc/");
+  if (dir == nullptr){
+        return -1;
   }
-  closedir(dir_proc);
-  return 0;
+  dirent *entry;
+
+  while ((entry = readdir(dir)) != NULL){
+    cout << entry->d_name << endl;
+  }
+  closedir(dir);
 }
 
 bool copyFile(const char *copyfromfile, const char *copytofile){
@@ -117,7 +122,7 @@ int main(int argc, char *argv[]){
   }
 
   if (string(argv[1]) == "-ssf"){
-    filesize(argv[2]);
+    cout << "Size is " << showsize(argv[2]) << " bytes" << endl;
   }
 
 return 0;
